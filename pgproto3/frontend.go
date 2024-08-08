@@ -58,6 +58,8 @@ type Frontend struct {
 	msgType    byte
 	partialMsg bool
 	authType   uint32
+
+	GaussDB bool
 }
 
 // NewFrontend creates a new Frontend.

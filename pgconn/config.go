@@ -273,6 +273,8 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		settings = mergeSettings(defaultSettings, envSettings, serviceSettings, connStringSettings)
 	}
 
+	var enableGauss = settings["gaussdb"] == "true" || settings["gaussdb"] == "1"
+
 	config := &Config{
 		createdByParseConfig: true,
 		Database:             settings["database"],
@@ -280,7 +282,11 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		Password:             settings["password"],
 		RuntimeParams:        make(map[string]string),
 		BuildFrontend: func(r io.Reader, w io.Writer) *pgproto3.Frontend {
-			return pgproto3.NewFrontend(r, w)
+			f := pgproto3.NewFrontend(r, w)
+			if enableGauss {
+				f.GaussDB = true
+			}
+			return f
 		},
 		BuildContextWatcherHandler: func(pgConn *PgConn) ctxwatch.Handler {
 			return &DeadlineContextWatcherHandler{Conn: pgConn.conn}
@@ -292,10 +298,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 			}
 			return true
 		},
-	}
-
-	if settings["gaussdb"] == "true" || settings["gaussdb"] == "1" {
-		config.GaussMode = true
+		GaussMode: enableGauss,
 	}
 
 	if connectTimeoutSetting, present := settings["connect_timeout"]; present {
