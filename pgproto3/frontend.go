@@ -22,36 +22,37 @@ type Frontend struct {
 	encodeError error
 
 	// Backend message flyweights
-	authenticationOk                AuthenticationOk
-	authenticationCleartextPassword AuthenticationCleartextPassword
-	authenticationMD5Password       AuthenticationMD5Password
-	authenticationGSS               AuthenticationGSS
-	authenticationGSSContinue       AuthenticationGSSContinue
-	authenticationSASL              AuthenticationSASL
-	authenticationSASLContinue      AuthenticationSASLContinue
-	authenticationSASLFinal         AuthenticationSASLFinal
-	backendKeyData                  BackendKeyData
-	bindComplete                    BindComplete
-	closeComplete                   CloseComplete
-	commandComplete                 CommandComplete
-	copyBothResponse                CopyBothResponse
-	copyData                        CopyData
-	copyInResponse                  CopyInResponse
-	copyOutResponse                 CopyOutResponse
-	copyDone                        CopyDone
-	dataRow                         DataRow
-	emptyQueryResponse              EmptyQueryResponse
-	errorResponse                   ErrorResponse
-	functionCallResponse            FunctionCallResponse
-	noData                          NoData
-	noticeResponse                  NoticeResponse
-	notificationResponse            NotificationResponse
-	parameterDescription            ParameterDescription
-	parameterStatus                 ParameterStatus
-	parseComplete                   ParseComplete
-	readyForQuery                   ReadyForQuery
-	rowDescription                  RowDescription
-	portalSuspended                 PortalSuspended
+	authenticationOk                    AuthenticationOk
+	authenticationCleartextPassword     AuthenticationCleartextPassword
+	authenticationMD5Password           AuthenticationMD5Password
+	authenticationGSS                   AuthenticationGSS
+	authenticationGSSContinue           AuthenticationGSSContinue
+	authenticationSASL                  AuthenticationSASL
+	authenticationSASLContinue          AuthenticationSASLContinue
+	authenticationSASLFinal             AuthenticationSASLFinal
+	authenticationSHA256PasswordGaussDB AuthenticationSHA256PasswordGaussDB
+	backendKeyData                      BackendKeyData
+	bindComplete                        BindComplete
+	closeComplete                       CloseComplete
+	commandComplete                     CommandComplete
+	copyBothResponse                    CopyBothResponse
+	copyData                            CopyData
+	copyInResponse                      CopyInResponse
+	copyOutResponse                     CopyOutResponse
+	copyDone                            CopyDone
+	dataRow                             DataRow
+	emptyQueryResponse                  EmptyQueryResponse
+	errorResponse                       ErrorResponse
+	functionCallResponse                FunctionCallResponse
+	noData                              NoData
+	noticeResponse                      NoticeResponse
+	notificationResponse                NotificationResponse
+	parameterDescription                ParameterDescription
+	parameterStatus                     ParameterStatus
+	parseComplete                       ParseComplete
+	readyForQuery                       ReadyForQuery
+	rowDescription                      RowDescription
+	portalSuspended                     PortalSuspended
 
 	bodyLen    int
 	msgType    byte
@@ -409,7 +410,13 @@ const (
 	AuthTypeSASL              = 10
 	AuthTypeSASLContinue      = 11
 	AuthTypeSASLFinal         = 12
+
+	AuthTypeSHA256    = 10
+	AuthTypeMD5SHA256 = 11
+	AuthTypeSM3       = 13
 )
+
+var GaussMode bool = true
 
 func (f *Frontend) findAuthenticationMessageType(src []byte) (BackendMessage, error) {
 	if len(src) < 4 {
@@ -417,29 +424,56 @@ func (f *Frontend) findAuthenticationMessageType(src []byte) (BackendMessage, er
 	}
 	f.authType = binary.BigEndian.Uint32(src[:4])
 
-	switch f.authType {
-	case AuthTypeOk:
-		return &f.authenticationOk, nil
-	case AuthTypeCleartextPassword:
-		return &f.authenticationCleartextPassword, nil
-	case AuthTypeMD5Password:
-		return &f.authenticationMD5Password, nil
-	case AuthTypeSCMCreds:
-		return nil, errors.New("AuthTypeSCMCreds is unimplemented")
-	case AuthTypeGSS:
-		return &f.authenticationGSS, nil
-	case AuthTypeGSSCont:
-		return &f.authenticationGSSContinue, nil
-	case AuthTypeSSPI:
-		return nil, errors.New("AuthTypeSSPI is unimplemented")
-	case AuthTypeSASL:
-		return &f.authenticationSASL, nil
-	case AuthTypeSASLContinue:
-		return &f.authenticationSASLContinue, nil
-	case AuthTypeSASLFinal:
-		return &f.authenticationSASLFinal, nil
-	default:
-		return nil, fmt.Errorf("unknown authentication type: %d", f.authType)
+	if GaussMode {
+		switch f.authType {
+		case AuthTypeOk:
+			return &f.authenticationOk, nil
+		case AuthTypeCleartextPassword:
+			return &f.authenticationCleartextPassword, nil
+		case AuthTypeMD5Password:
+			return &f.authenticationMD5Password, nil
+		case AuthTypeSCMCreds:
+			return nil, errors.New("AuthTypeSCMCreds is unimplemented")
+		case AuthTypeGSS:
+			return &f.authenticationGSS, nil
+		case AuthTypeGSSCont:
+			return &f.authenticationGSSContinue, nil
+		case AuthTypeSSPI:
+			return nil, errors.New("AuthTypeSSPI is unimplemented")
+		case AuthTypeMD5SHA256:
+			return nil, errors.New("AuthTypeMD4SHA256(GaussDB) is unimplemented")
+		case AuthTypeSHA256:
+			return &f.authenticationSHA256PasswordGaussDB, nil
+		case AuthTypeSM3:
+			return nil, errors.New("AuthTypeSM3(GaussDB) is unimplemented")
+		default:
+			return nil, fmt.Errorf("unknown authentication type(GaussDB): %d", f.authType)
+		}
+	} else {
+		switch f.authType {
+		case AuthTypeOk:
+			return &f.authenticationOk, nil
+		case AuthTypeCleartextPassword:
+			return &f.authenticationCleartextPassword, nil
+		case AuthTypeMD5Password:
+			return &f.authenticationMD5Password, nil
+		case AuthTypeSCMCreds:
+			return nil, errors.New("AuthTypeSCMCreds is unimplemented")
+		case AuthTypeGSS:
+			return &f.authenticationGSS, nil
+		case AuthTypeGSSCont:
+			return &f.authenticationGSSContinue, nil
+		case AuthTypeSSPI:
+			return nil, errors.New("AuthTypeSSPI is unimplemented")
+		case AuthTypeSASL:
+			return &f.authenticationSASL, nil
+		case AuthTypeSASLContinue:
+			return &f.authenticationSASLContinue, nil
+		case AuthTypeSASLFinal:
+			return &f.authenticationSASLFinal, nil
+		default:
+			return nil, fmt.Errorf("unknown authentication type: %d", f.authType)
+		}
 	}
 }
 

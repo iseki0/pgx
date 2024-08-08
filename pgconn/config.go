@@ -72,6 +72,8 @@ type Config struct {
 	OnPgError PgErrorHandler
 
 	createdByParseConfig bool // Used to enforce created by ParseConfig rule.
+
+	GaussMode bool // HuaWei GaussDB
 }
 
 // ParseConfigOptions contains options that control how a config is built such as GetSSLPassword.
@@ -292,6 +294,10 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		},
 	}
 
+	if settings["gaussdb"] == "true" || settings["gaussdb"] == "1" {
+		config.GaussMode = true
+	}
+
 	if connectTimeoutSetting, present := settings["connect_timeout"]; present {
 		connectTimeout, err := parseConnectTimeoutSetting(connectTimeoutSetting)
 		if err != nil {
@@ -325,6 +331,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		"target_session_attrs": {},
 		"service":              {},
 		"servicefile":          {},
+		"gaussdb":              {},
 	}
 
 	// Adding kerberos configuration

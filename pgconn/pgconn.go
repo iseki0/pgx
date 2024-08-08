@@ -353,6 +353,10 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 		Parameters:      make(map[string]string),
 	}
 
+	if config.GaussMode {
+		startupMsg.ProtocolVersion = 0x30000 + 51
+	}
+
 	// Copy default run-time params
 	for k, v := range config.RuntimeParams {
 		startupMsg.Parameters[k] = v
@@ -409,6 +413,20 @@ func connectOne(ctx context.Context, config *Config, connectConfig *connectOneCo
 			if err != nil {
 				pgConn.conn.Close()
 				return nil, newPerDialConnectError("failed GSS auth", err)
+			}
+		case *pgproto3.AuthenticationSHA256PasswordGaussDB:
+			//pgConn.config.Password
+			var b []byte
+			b, err = gaussGenerateKFromPBKDF2(pgConn.config.Password, msg.Random64Code, msg.Token, msg.ServerSignature, msg.ServerSignatureEnabled, int(msg.ServerIteration))
+			if err != nil {
+				_ = pgConn.conn.Close()
+				return nil, newPerDialConnectError("failed GaussDB sha256 auth(kdf)", err)
+			}
+			pgConn.frontend.Send(&pgproto3.AuthenticationSHA256PasswordGaussDBResp{Buf: b})
+			err = pgConn.flushWithPotentialWriteReadDeadlock()
+			if err != nil {
+				_ = pgConn.conn.Close()
+				return nil, newPerDialConnectError("failed GaussDB sha256 auth(flush)", err)
 			}
 		case *pgproto3.ReadyForQuery:
 			pgConn.status = connStatusIdle
