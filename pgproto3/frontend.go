@@ -418,15 +418,13 @@ const (
 	AuthTypeSM3       = 13
 )
 
-var GaussMode bool = true
-
 func (f *Frontend) findAuthenticationMessageType(src []byte) (BackendMessage, error) {
 	if len(src) < 4 {
 		return nil, errors.New("authentication message too short")
 	}
 	f.authType = binary.BigEndian.Uint32(src[:4])
 
-	if GaussMode {
+	if f.GaussDB {
 		switch f.authType {
 		case AuthTypeOk:
 			return &f.authenticationOk, nil
